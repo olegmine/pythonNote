@@ -1,167 +1,221 @@
-# Последний релиз программы блокнот ,нет багов ,оптимизированный код,красивый интерфейс.
-
 import customtkinter as ctk
 from tkinter import ttk
+import sqlite3
+
+# Создание подключения к базе данных
+conn = sqlite3.connect('mydatabase.db')
+cursor = conn.cursor() # создаем обьеткт для выполнения SQL запроса
+
+# Создание таблицы
+cursor.execute('''CREATE TABLE IF NOT EXISTS users
+                (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                first_name TEXT,
+                last_name TEXT,
+                phone_number TEXT,
+                programming_skill TEXT)''')
 
 
-class Contact:
-    def __init__(self, first_name, last_name, phone_number, can_program):
-        self.first_name = first_name
-        self.last_name = last_name
-        self.phone_number = phone_number
-        self.can_program = can_program
+def add_user():
+    first_name = entry_first_name.get()
+    last_name = entry_last_name.get()
+    phone_number = entry_phone.get()
+    programming_skill = combo_skill.get()
+
+    cursor.execute('''INSERT INTO users (first_name, last_name, phone_number, programming_skill)
+                    VALUES (?, ?, ?, ?)''', (first_name, last_name, phone_number, programming_skill))
+    conn.commit()  #Подтверждаем внесение изменений
+
+    clear_entries()
+    load_data()
 
 
-class NotepadApp(ctk.CTk):
-    def __init__(self):
-        super().__init__()
+def edit_user():
+    selected_item = table.focus()
+    if selected_item:
+        user_id = table.item(selected_item, 'values')[0]
+        first_name = entry_first_name.get()
+        last_name = entry_last_name.get()
+        phone_number = entry_phone.get()
+        programming_skill = combo_skill.get()
 
-        self.title("Записная книжка")
-        self.geometry("850x400")
+        cursor.execute('''UPDATE users SET first_name=?, last_name=?, phone_number=?, programming_skill=?
+                          WHERE id=?''', (first_name, last_name, phone_number, programming_skill, user_id))
+        conn.commit()
 
-        self.contacts = []
-        self.load_contacts()
-
-        self.create_widgets()
-
-    def create_widgets(self):
-        self.table = ttk.Treeview(self, columns=("Имя", "Фамилия", "Номер телефона", "Умеет программировать"),
-                                  show="headings")
-        self.table.heading("Имя", text="Имя")
-        self.table.heading("Фамилия", text="Фамилия")
-        self.table.heading("Номер телефона", text="Номер телефона")
-        self.table.heading("Умеет программировать", text="Умеет программировать")
-        self.table.pack(fill="both", expand=True)
-
-        self.display_contacts()
-
-        self.add_button = ctk.CTkButton(self, text="Добавить", command=self.add_contact)
-        self.add_button.pack(side="left", padx=70, pady=10)
-
-        self.edit_button = ctk.CTkButton(self, text="Редактировать", command=self.edit_contact)
-        self.edit_button.pack(side="left", padx=70, pady=10)
-
-        self.delete_button = ctk.CTkButton(self, text="Удалить", command=self.delete_contact)
-        self.delete_button.pack(side="left", padx=70, pady=10)
-
-    def display_contacts(self):
-        self.table.delete(*self.table.get_children())
-        for contact in self.contacts:
-            self.table.insert("", "end", values=(
-            contact.first_name, contact.last_name, contact.phone_number, "Да" if contact.can_program else "Нет"))
-
-    def add_contact(self):
-        add_window = ctk.CTkToplevel(self)
-        add_window.title("Добавить контакт")
-        add_window.geometry("400x250")
-
-        first_name_label = ctk.CTkLabel(add_window, text="Имя:")
-        first_name_label.pack()
-        first_name_entry = ctk.CTkEntry(add_window)
-        first_name_entry.pack()
-
-        last_name_label = ctk.CTkLabel(add_window, text="Фамилия:")
-        last_name_label.pack()
-        last_name_entry = ctk.CTkEntry(add_window)
-        last_name_entry.pack()
-
-        phone_label = ctk.CTkLabel(add_window, text="Номер телефона:")
-        phone_label.pack()
-        phone_entry = ctk.CTkEntry(add_window)
-        phone_entry.pack()
-
-        can_program_var = ctk.BooleanVar()
-        can_program_checkbox = ctk.CTkCheckBox(add_window, text="Умеет программировать", variable=can_program_var)
-        can_program_checkbox.pack()
-
-        def save_contact():
-            first_name = first_name_entry.get()
-            last_name = last_name_entry.get()
-            phone_number = phone_entry.get()
-            can_program = can_program_var.get()
-
-            contact = Contact(first_name, last_name, phone_number, can_program)
-            self.contacts.append(contact)
-            self.save_contacts()
-            self.display_contacts()
-
-            add_window.destroy()
-
-        save_button = ctk.CTkButton(add_window, text="Сохранить", command=save_contact)
-        save_button.pack(pady=10)
-
-    def edit_contact(self):
-        selected_item = self.table.selection()
-        if selected_item:
-            index = self.table.index(selected_item)
-            contact = self.contacts[index]
-
-            edit_window = ctk.CTkToplevel(self)
-            edit_window.title("Редактировать контакт")
-            edit_window.geometry("400x250")
-
-            first_name_label = ctk.CTkLabel(edit_window, text="Имя:")
-            first_name_label.pack()
-            first_name_entry = ctk.CTkEntry(edit_window)
-            first_name_entry.insert(0, contact.first_name)
-            first_name_entry.pack()
-
-            last_name_label = ctk.CTkLabel(edit_window, text="Фамилия:")
-            last_name_label.pack()
-            last_name_entry = ctk.CTkEntry(edit_window)
-            last_name_entry.insert(0, contact.last_name)
-            last_name_entry.pack()
-
-            phone_label = ctk.CTkLabel(edit_window, text="Номер телефона:")
-            phone_label.pack()
-            phone_entry = ctk.CTkEntry(edit_window)
-            phone_entry.insert(0, contact.phone_number)
-            phone_entry.pack()
-
-            can_program_var = ctk.BooleanVar(value=contact.can_program)
-            can_program_checkbox = ctk.CTkCheckBox(edit_window, text="Умеет программировать", variable=can_program_var)
-            can_program_checkbox.pack()
-
-            def save_changes():
-                contact.first_name = first_name_entry.get()
-                contact.last_name = last_name_entry.get()
-                contact.phone_number = phone_entry.get()
-                contact.can_program = can_program_var.get()
-
-                self.save_contacts()
-                self.display_contacts()
-
-                edit_window.destroy()
-
-            save_button = ctk.CTkButton(edit_window, text="Сохранить", command=save_changes)
-            save_button.pack(pady=10)
-
-    def delete_contact(self):
-        selected_item = self.table.selection()
-        if selected_item:
-            index = self.table.index(selected_item)
-            del self.contacts[index]
-            self.save_contacts()
-            self.display_contacts()
-
-    def load_contacts(self):
-        try:
-            with open("contacts.txt", "r",encoding="utf-8") as file:
-                lines = file.readlines()
-                for line in lines:
-                    data = line.strip().split(",")
-                    first_name, last_name, phone_number, can_program = data
-                    contact = Contact(first_name, last_name, phone_number, can_program == "True")
-                    self.contacts.append(contact)
-        except FileNotFoundError:
-            pass
-
-    def save_contacts(self):
-        with open("contacts.txt", "w",encoding="utf-8") as file:
-            for contact in self.contacts:
-                file.write(f"{contact.first_name},{contact.last_name},{contact.phone_number},{contact.can_program}\n")
+        clear_entries()
+        load_data()
 
 
-if __name__ == "__main__":
-    app = NotepadApp()
-    app.mainloop()
+def delete_user():
+    selected_item = table.focus()
+    if selected_item:
+        user_id = table.item(selected_item, 'values')[0]
+
+        cursor.execute('DELETE FROM users WHERE id=?', (user_id,))
+        conn.commit()
+
+        load_data()
+
+
+def search_users():
+    keyword = entry_search.get()
+
+    cursor.execute('''SELECT * FROM users
+                      WHERE first_name LIKE ? OR last_name LIKE ? OR phone_number LIKE ?''',
+                   ('%' + keyword + '%', '%' + keyword + '%', '%' + keyword + '%'))
+    results = cursor.fetchall()
+
+    display_data(results)
+
+
+def filter_by_skill():
+    selected_skill = combo_filter.get()
+
+    if selected_skill == 'Все':
+        load_data()
+    else:
+        cursor.execute('SELECT * FROM users WHERE programming_skill=?', (selected_skill,))
+        results = cursor.fetchall()
+        display_data(results)
+
+# Загрузка/обновление  данных
+def load_data():
+    cursor.execute("SELECT * FROM users")
+    results = cursor.fetchall()
+
+    display_data(results)
+
+
+def display_data(data):
+    table.delete(*table.get_children())
+
+    for i, row in enumerate(data, start=1):
+        if i % 2 == 0:
+            table.insert("", ctk.END, values=row, tags=('evenrow',))
+        else:
+            table.insert("", ctk.END, values=row, tags=('oddrow',))
+
+# Очистка полей
+def clear_entries():
+    entry_first_name.delete(0, ctk.END)
+    entry_last_name.delete(0, ctk.END)
+    entry_phone.delete(0, ctk.END)
+    combo_skill.set('')
+
+
+def on_select(event):
+    selected_item = table.focus()
+    if selected_item:
+        values = table.item(selected_item, 'values')
+        entry_first_name.delete(0, ctk.END)
+        entry_first_name.insert(0, values[1])
+        entry_last_name.delete(0, ctk.END)
+        entry_last_name.insert(0, values[2])
+        entry_phone.delete(0, ctk.END)
+        entry_phone.insert(0, values[3])
+        combo_skill.set(values[4])
+
+
+def toggle_theme():                                                              # Изменение темы (светлая/темная)
+    if switch_state.get():
+        ctk.set_appearance_mode("Light")
+        table.tag_configure('oddrow', background='#F0F0F0')
+        table.tag_configure('evenrow', background='#FFFFFF')
+        ctk.set_default_color_theme("blue")
+    else:
+        ctk.set_appearance_mode("Dark")
+        table.tag_configure('oddrow', background='#2C2F33')
+        table.tag_configure('evenrow', background='#23272A')
+        ctk.set_default_color_theme("green")
+
+
+# Создание главного окна
+window = ctk.CTk()
+window.title("Пользователи")
+window.geometry("1000x600")
+
+# Настройка темы PyDracula
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("green")
+
+# Создание элементов интерфейса
+frame_add = ctk.CTkFrame(window)
+frame_add.pack(pady=20)
+
+label_first_name = ctk.CTkLabel(frame_add, text="Имя:")
+label_first_name.grid(row=0, column=0, padx=5, pady=5)
+entry_first_name = ctk.CTkEntry(frame_add)
+entry_first_name.grid(row=0, column=1, padx=5, pady=5)
+
+label_last_name = ctk.CTkLabel(frame_add, text="Фамилия:")
+label_last_name.grid(row=0, column=2, padx=5, pady=5)
+entry_last_name = ctk.CTkEntry(frame_add)
+entry_last_name.grid(row=0, column=3, padx=5, pady=5)
+
+label_phone = ctk.CTkLabel(frame_add, text="Телефон:")
+label_phone.grid(row=1, column=0, padx=5, pady=5)
+entry_phone = ctk.CTkEntry(frame_add)
+entry_phone.grid(row=1, column=1, padx=5, pady=5)
+
+label_skill = ctk.CTkLabel(frame_add, text="Навык программирования:")
+label_skill.grid(row=1, column=2, padx=5, pady=5)
+combo_skill = ctk.CTkComboBox(frame_add, values=['Python', 'Java', 'C++'])
+combo_skill.grid(row=1, column=3, padx=5, pady=5)
+
+button_add = ctk.CTkButton(frame_add, text="Добавить", command=add_user)
+button_add.grid(row=2, column=0, padx=5, pady=10)
+
+button_edit = ctk.CTkButton(frame_add, text="Редактировать", command=edit_user)
+button_edit.grid(row=2, column=1, padx=5, pady=10)
+
+button_delete = ctk.CTkButton(frame_add, text="Удалить", command=delete_user)
+button_delete.grid(row=2, column=2, padx=5, pady=10)
+
+frame_search = ctk.CTkFrame(window)
+frame_search.pack(pady=10)
+
+label_search = ctk.CTkLabel(frame_search, text="Поиск (по имени, фамилии или номеру телефона):")
+label_search.pack(side=ctk.LEFT, padx=5)
+entry_search = ctk.CTkEntry(frame_search)
+entry_search.pack(side=ctk.LEFT, padx=5)
+button_search = ctk.CTkButton(frame_search, text="Найти", command=search_users)
+button_search.pack(side=ctk.LEFT, padx=5)
+
+frame_filter = ctk.CTkFrame(window)
+frame_filter.pack(pady=10)
+
+label_filter = ctk.CTkLabel(frame_filter, text="Фильтр по навыку программирования:")
+label_filter.pack(side=ctk.LEFT, padx=5)
+combo_filter = ctk.CTkComboBox(frame_filter, values=['Все', 'Python', 'Java', 'C++'])
+combo_filter.pack(side=ctk.LEFT, padx=5)
+combo_filter.set('Все')
+button_filter = ctk.CTkButton(frame_filter, text="Применить", command=filter_by_skill)
+button_filter.pack(side=ctk.LEFT, padx=5)
+
+table = ttk.Treeview(window, columns=("ID", "Имя", "Фамилия", "Телефон", "Навык программирования"), show="headings")
+table.heading("ID", text="ID")
+table.heading("Имя", text="Имя")
+table.heading("Фамилия", text="Фамилия")
+table.heading("Телефон", text="Телефон")
+table.heading("Навык программирования", text="Навык программирования")
+
+table.column("ID", width=10)  # Установка ширины столбца "ID" в 50 пикселей
+# table.column("Навык программирования",width=100)
+
+table.tag_configure('oddrow', background='#2C2F33')
+table.tag_configure('evenrow', background='#23272A')
+
+table.pack(fill=ctk.BOTH, expand=True, padx=20, pady=20)
+
+table.bind("<<TreeviewSelect>>", on_select)
+
+switch_state = ctk.BooleanVar()
+
+switch_theme = ctk.CTkSwitch(window, text="Сменить тему", variable=switch_state, command=toggle_theme)
+switch_theme.pack(pady=10)
+
+load_data()
+
+window.mainloop()
+
+conn.close()
